@@ -9458,10 +9458,17 @@ function showItemTip(e,fi){
   tip.style.display='block';
   const r=e.currentTarget.getBoundingClientRect();
   const tw=tip.offsetWidth||tipW;
-  let left=r.left+window.scrollX;
+  const th=tip.offsetHeight;
+  // position:fixed uses viewport coords — no scrollX/Y needed
+  let left=r.left;
+  let top=r.bottom+4;
+  // flip left if it would overflow right edge
   if(left+tw>window.innerWidth-10)left=Math.max(10,window.innerWidth-tw-10);
-  let top=r.bottom+window.scrollY+4;
-  if(top+tip.offsetHeight>window.innerHeight+window.scrollY-10)top=r.top+window.scrollY-tip.offsetHeight-4;
+  // flip above dot if it would overflow bottom edge
+  if(top+th>window.innerHeight-10)top=r.top-th-4;
+  // hard-clamp so it never escapes the viewport on any side
+  top=Math.max(10,Math.min(top,window.innerHeight-th-10));
+  left=Math.max(10,left);
   tip.style.left=left+'px';tip.style.top=top+'px';
 }
 function hideItemTip(){document.getElementById('itemTip').style.display='none';}
