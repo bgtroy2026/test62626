@@ -119,6 +119,7 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
       <select id="stateFilter" class="filter-sel" onchange="applyFilters()"><option value="">All states</option></select>
       <label style="margin-left:8px;width:auto">Item</label>
       <select id="itemFilter" class="filter-sel" onchange="applyFilters()"><option value="">All items</option></select>
+      <button class="pill-btn" onclick="resetFilters()" style="margin-left:12px;border-color:#ef4444;color:#ef4444">&#10006; Reset</button>
     </div>
   </div>
 
@@ -13909,7 +13910,8 @@ let filtered=[];
 
 function setChannel(f,el){chFilter=f;document.querySelectorAll('.filter-row .pill-btn[onclick^="setChannel"]').forEach(b=>b.classList.remove('active'));el.classList.add('active');applyFilters();}
 function setBrand(b,el){brandF=b;document.querySelectorAll('.filter-row .pill-btn[onclick^="setBrand"]').forEach(x=>x.classList.remove('active'));el.classList.add('active');applyFilters();}
-function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='total'||k==='recent')?-1:1;}document.querySelectorAll('th').forEach(t=>t.classList.remove('sorted'));const th=document.getElementById('th-'+k);if(th){th.classList.add('sorted');th.querySelector('.sa').textContent=sortDir===-1?'↓':'↑';}page=0;renderTable();}
+function sortFiltered(){filtered.sort((a,b)=>{const av=sortKey==='total'?a.total:sortKey==='recent'?a.recent:sortKey==='name'?a.n:sortKey==='city'?a.ci:sortKey==='state'?a.st:sortKey==='dist'?DIST_NAMES[a.d]:sortKey==='chain'?CHAIN_NAMES[a.ch]:a.t;const bv=sortKey==='total'?b.total:sortKey==='recent'?b.recent:sortKey==='name'?b.n:sortKey==='city'?b.ci:sortKey==='state'?b.st:sortKey==='dist'?DIST_NAMES[b.d]:sortKey==='chain'?CHAIN_NAMES[b.ch]:b.t;return av<bv?-1*sortDir:av>bv?sortDir:0;});}
+function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='total'||k==='recent')?-1:1;}document.querySelectorAll('th').forEach(t=>t.classList.remove('sorted'));const th=document.getElementById('th-'+k);if(th){th.classList.add('sorted');th.querySelector('.sa').textContent=sortDir===-1?'↓':'↑';}page=0;sortFiltered();renderTable();}
 
 function buildAccts(){
   const dv=document.getElementById('distFilter').value;
@@ -13941,6 +13943,19 @@ function buildAccts(){
   }));
 }
 
+function resetFilters(){
+  brandF=null;chFilter='all';
+  document.querySelectorAll('.filter-row .pill-btn[onclick^="setBrand"]').forEach(x=>x.classList.remove('active'));
+  document.querySelector('.filter-row .pill-btn[onclick^="setBrand"]').classList.add('active');
+  document.querySelectorAll('.filter-row .pill-btn[onclick^="setChannel"]').forEach(x=>x.classList.remove('active'));
+  document.querySelector('.filter-row .pill-btn[onclick^="setChannel"]').classList.add('active');
+  document.getElementById('distFilter').value='';
+  document.getElementById('stateFilter').value='';
+  document.getElementById('itemFilter').value='';
+  document.getElementById('chainFilter').value='';
+  document.getElementById('searchBox').value='';
+  applyFilters();
+}
 function applyFilters(){
   const q=document.getElementById('searchBox').value.trim().toLowerCase();
   const accts=buildAccts();
@@ -13948,11 +13963,7 @@ function applyFilters(){
     if(q){const h=(a.n+' '+a.ci+' '+a.st+' '+DIST_NAMES[a.d]+' '+CHAIN_NAMES[a.ch]).toLowerCase();if(!h.includes(q))return false;}
     return true;
   });
-  filtered.sort((a,b)=>{
-    const av=sortKey==='total'?a.total:sortKey==='recent'?a.recent:sortKey==='name'?a.n:sortKey==='city'?a.ci:sortKey==='state'?a.st:sortKey==='dist'?DIST_NAMES[a.d]:sortKey==='chain'?CHAIN_NAMES[a.ch]:a.t;
-    const bv=sortKey==='total'?b.total:sortKey==='recent'?b.recent:sortKey==='name'?b.n:sortKey==='city'?b.ci:sortKey==='state'?b.st:sortKey==='dist'?DIST_NAMES[b.d]:sortKey==='chain'?CHAIN_NAMES[b.ch]:b.t;
-    return av<bv?-1*sortDir:av>bv?sortDir:0;
-  });
+  sortFiltered();
   page=0;
   renderKPIs(accts);
   renderTrend(accts);
