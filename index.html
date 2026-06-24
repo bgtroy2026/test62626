@@ -9415,7 +9415,9 @@ function buildAccts(){
   }
   return[...m.values()].map(a=>{
     const cc=cityCoords[a.ci+'|'+a.st];
-    const proxMi=(viewerLat!==null&&cc)?haversineMiles(viewerLat,viewerLon,cc.lat,cc.lon):9999;
+    const _lat=cc&&(Array.isArray(cc)?cc[0]:cc.lat);
+    const _lon=cc&&(Array.isArray(cc)?cc[1]:cc.lon);
+    const proxMi=(viewerLat!==null&&_lat!=null)?haversineMiles(viewerLat,viewerLon,_lat,_lon):9999;
     return{...a,ce:Math.round(a.ce*10)/10,brandArr:[...a.brands],proxMi};
   });
 }
