@@ -105,6 +105,48 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
 .ss-opt:hover{background:#f5f5f5}
 .ss-opt.selected{background:#f0fdf4;color:#166534;font-weight:600}
 .ss-opt.hidden{display:none}
+
+/* ── Mobile responsive ── */
+@media(max-width:768px){
+  header{padding:8px 14px;gap:10px}
+  header h1{font-size:13px}
+  header .period{font-size:11px}
+  .container{padding:10px 10px}
+  .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .kpi{padding:10px 12px}
+  .kpi .value{font-size:20px}
+  .kpi .sub{font-size:10px}
+  .filter-section{padding:10px 12px}
+  .filter-row{gap:6px}
+  .filter-row label{width:auto;min-width:0;font-size:10px}
+  .pill-btn{padding:4px 10px;font-size:11px}
+  .ss-wrap{max-width:100%}
+  .charts-row{grid-template-columns:1fr;gap:10px}
+  .dist-name{width:110px;font-size:10px}
+  .brand-grid{max-height:200px}
+  .table-controls{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .count-badge{font-size:10px}
+  table{font-size:11px}
+  th{padding:7px 8px;font-size:9px}
+  td{padding:6px 8px}
+  /* hide less-critical columns */
+  #th-chain,.chain-chip-cell,
+  #th-karma,.karma-cell{display:none}
+  .vol-bar{width:36px}
+  .pagination{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .pagination .info{font-size:10px}
+  /* tooltip: full-width, single column on mobile */
+  .item-tip{width:calc(100vw - 20px) !important;max-width:calc(100vw - 20px) !important;left:10px !important}
+  .tip-brands-grid{grid-template-columns:1fr !important}
+  /* larger tap target for dot */
+  .brand-dot{width:13px;height:13px}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  header h1{font-size:12px}
+  #th-state,.state-cell,
+  #th-dist,.dist-cell{display:none}
+}
 </style>
 </head>
 <body>
@@ -9415,14 +9457,14 @@ function renderTable(){
     const fi=start+ri;
     const dotColor=a.brandArr.length===1?BRAND_COLORS[a.brandArr[0]]:'#6b7280';
     return'<tr>'
-      +'<td class="acct-name"><span class="brand-dot" style="background:'+dotColor+'" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()"></span>'+hl(a.n,q)+'</td>'
+      +'<td class="acct-name"><span class="brand-dot" style="background:'+dotColor+'" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()" ontouchstart="toggleItemTip(event,'+fi+')"></span>'+hl(a.n,q)+'</td>'
       +'<td style="color:#555;font-size:12px">'+hl(a.ci,q)+'</td>'
-      +'<td><span class="state-badge">'+a.st+'</span></td>'
-      +'<td><span class="dist-chip">'+hl(DIST_NAMES[a.d],q)+'</span></td>'
-      +'<td class="chain-chip">'+hl(a.ch>=0?CHAIN_NAMES[a.ch]:'—',q)+'</td>'
+      +'<td class="state-cell"><span class="state-badge">'+a.st+'</span></td>'
+      +'<td class="dist-cell"><span class="dist-chip">'+hl(DIST_NAMES[a.d],q)+'</span></td>'
+      +'<td class="chain-chip-cell chain-chip">'+hl(a.ch>=0?CHAIN_NAMES[a.ch]:'—',q)+'</td>'
       +'<td>'+ch+'</td>'
       +'<td><div class="vol-bar-wrap"><div class="vol-bar"><div class="vol-bar-fill" style="width:'+pct+'%"></div></div><span class="vol-num">'+a.ce.toFixed(1)+'</span></div></td>'
-      +'<td class="karma-date">'+fmtKarma(a.karma)+'</td>'
+      +'<td class="karma-cell karma-date">'+fmtKarma(a.karma)+'</td>'
       +'</tr>';
   }).join('');
   document.getElementById('countBadge').textContent=filtered.length.toLocaleString()+' accounts';
@@ -9472,6 +9514,8 @@ function showItemTip(e,fi){
   tip.style.left=left+'px';tip.style.top=top+'px';
 }
 function hideItemTip(){document.getElementById('itemTip').style.display='none';}
+function toggleItemTip(e,fi){e.stopPropagation();const tip=document.getElementById('itemTip');if(tip.style.display==='block'&&tip.dataset.fi==fi){hideItemTip();return;}showItemTip(e,fi);tip.dataset.fi=fi;tip.style.pointerEvents='auto';}
+document.addEventListener('touchstart',function(e){const tip=document.getElementById('itemTip');if(tip.style.display==='block'&&!tip.contains(e.target)&&!e.target.classList.contains('brand-dot'))hideItemTip();},{passive:true});
 function gp(p){const tp=Math.ceil(filtered.length/PS);if(p<0||p>=tp)return;page=p;renderTable();}
 
 document.addEventListener('click', e=>{
