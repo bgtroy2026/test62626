@@ -29,17 +29,30 @@ select.filter-sel:focus{outline:none;border-color:#6b7280}
 .charts-row{display:grid;grid-template-columns:3fr 1fr;gap:14px;margin-bottom:18px}
 .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .card h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:14px;font-weight:600}
-.dist-bar{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px}
+.dist-bar{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px;cursor:pointer;border-radius:5px;padding:2px 4px 2px 0;transition:background .12s}
+.dist-bar:hover{background:#f3f4f6}
+.dist-bar.dist-active{background:#fef9ec}
+.dist-bar.dist-active .dist-name{color:#92740A;font-weight:700}
 .dist-name{width:200px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;flex-shrink:0}
+.kpi.clickable{cursor:pointer;transition:box-shadow .12s,transform .1s}
+.kpi.clickable:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);transform:translateY(-1px)}
+.kpi.clickable.ch-active{box-shadow:0 0 0 2px currentColor;}
 .dist-track{flex:1;height:14px;background:#f3f4f6;border-radius:3px;overflow:hidden}
 .dist-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px}
 .dist-fill span{font-size:10px;font-weight:600;color:#fff;white-space:nowrap}
-.brand-grid{display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:340px}
-.leg-row{display:flex;align-items:center;gap:9px;font-size:12px}
-.leg-thumb{width:34px;height:34px;border-radius:7px;flex-shrink:0;object-fit:cover;border:1px solid #e5e7eb;background:#f9fafb}
-.leg-badge{width:34px;height:34px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1.2;text-align:center;letter-spacing:.2px}
-.leg-label{color:#444;flex:1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.leg-val{color:#111;font-weight:700;font-size:11px;min-width:44px;text-align:right}
+.brand-grid{display:flex;flex-direction:column;gap:2px;overflow-y:auto;max-height:340px}
+.leg-row{display:flex;align-items:center;gap:9px;font-size:12px;cursor:pointer;border-radius:8px;padding:4px 6px;transition:background .12s}
+.leg-row:hover{background:#f9fafb}
+.leg-row.brand-active{background:#fef9ec;outline:1.5px solid #d4a017}
+.leg-thumb{width:30px;height:30px;border-radius:6px;flex-shrink:0;object-fit:cover;border:1px solid #e5e7eb;background:#f9fafb}
+.leg-badge{width:30px;height:30px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:#fff;line-height:1.2;text-align:center;letter-spacing:.2px}
+.leg-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.leg-label{color:#444;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.leg-bar-wrap{display:flex;align-items:center;gap:5px}
+.leg-bar{flex:1;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden}
+.leg-bar-fill{height:100%;border-radius:2px}
+.leg-pct{font-size:9px;color:#aaa;white-space:nowrap;min-width:26px}
+.leg-val{color:#111;font-weight:700;font-size:11px;min-width:40px;text-align:right}
 .table-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .table-controls{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f0f0f0;background:#fafafa}
 .search-wrap{position:relative;flex:1}
@@ -182,8 +195,8 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
   <div class="kpi-row">
     <div class="kpi gold"><div class="label">Total CE Volume</div><div class="value" id="kpiTotal">—</div><div class="sub">Case Equivalents</div></div>
     <div class="kpi"><div class="label">Active Accounts</div><div class="value" id="kpiAccts">—</div><div class="sub">Unique locations</div></div>
-    <div class="kpi blue"><div class="label">OFF Premise CE</div><div class="value" id="kpiOff">—</div><div class="sub" id="kpiOffPct">—</div></div>
-    <div class="kpi green"><div class="label">ON Premise CE</div><div class="value" id="kpiOn">—</div><div class="sub" id="kpiOnPct">—</div></div>
+    <div class="kpi blue clickable" id="kpiCardOff" onclick="setChannelFromKPI('0')" title="Click to filter OFF Premise"><div class="label">OFF Premise CE ↓</div><div class="value" id="kpiOff">—</div><div class="sub" id="kpiOffPct">—</div></div>
+    <div class="kpi green clickable" id="kpiCardOn" onclick="setChannelFromKPI('1')" title="Click to filter ON Premise"><div class="label">ON Premise CE ↓</div><div class="value" id="kpiOn">—</div><div class="sub" id="kpiOnPct">—</div></div>
     <div class="kpi purple"><div class="label">Avg CE / Account</div><div class="value" id="kpiAvg">—</div><div class="sub">CE per active account</div></div>
   </div>
 
@@ -9341,7 +9354,7 @@ ssPopulate('ssItem',ITEM_NAMES,true);
 });
 
 
-let chFilter='all',brandF=null,sortKey='vol',sortDir=-1,page=0;
+let chFilter='1',brandF=null,sortKey='vol',sortDir=-1,page=0;
 const PS=25;
 let filtered=[];
 
@@ -9403,6 +9416,9 @@ function applyFilters(){
   renderDistChart(accts);
   renderBrandLegend(accts);
   renderTable();
+  // keep KPI card active state in sync with channel filter
+  document.getElementById('kpiCardOff').classList.toggle('ch-active',chFilter==='0');
+  document.getElementById('kpiCardOn').classList.toggle('ch-active',chFilter==='1');
 }
 
 function hl(txt,q){if(!q||typeof txt!=='string')return txt;var esc=q.replace(new RegExp('[.*+?^${}()|\[\]\\]','g'),'\$&');return txt.replace(new RegExp('('+esc+')','gi'),'<em class="hl">$1</em>');}
@@ -9421,10 +9437,42 @@ function renderKPIs(accts){
 }
 
 function renderDistChart(accts){
+  const activeDist=ssGetValue('ssDist');
   const by=DIST_NAMES.map((n,i)=>{const v=accts.filter(a=>a.d===i).reduce((s,a)=>s+a.ce,0);return{n,v:Math.round(v),i};}).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
   const mx=by[0]?by[0].v:1;
   const DCOLS=['#1D6FA4','#EA580C','#166534','#B45309','#7C3AED','#CA8A04','#DC2626','#0E7490','#DB2777','#6D28D9','#059669','#BE185D','#D97706','#1E40AF','#F97316','#A78BFA','#06B6D4','#9CA3AF','#FB923C'];
-  document.getElementById('distChart').innerHTML=by.map(x=>'<div class="dist-bar"><div class="dist-name">'+x.n+'</div><div class="dist-track"><div class="dist-fill" style="width:'+Math.round(x.v/mx*100)+'%;background:'+DCOLS[x.i%DCOLS.length]+'"><span>'+x.v+'</span></div></div></div>').join('');
+  document.getElementById('distChart').innerHTML=by.map(x=>{
+    const isActive=activeDist===String(x.i);
+    const barCls='dist-bar'+(isActive?' dist-active':'');
+    const fillStyle='width:'+Math.round(x.v/mx*100)+'%;background:'+DCOLS[x.i%DCOLS.length]+(isActive?';box-shadow:inset 0 0 0 2px rgba(0,0,0,.2)':'');
+    return'<div class="'+barCls+'" onclick="setDistFilter('+x.i+')" title="'+(isActive?'Clear filter':'Filter to '+x.n)+'">'
+      +'<div class="dist-name">'+(isActive?'✓ ':'')+x.n+'</div>'
+      +'<div class="dist-track"><div class="dist-fill" style="'+fillStyle+'"><span>'+x.v+'</span></div></div>'
+      +'</div>';
+  }).join('');
+}
+function setDistFilter(distIdx){
+  const s=SS_STATE['ssDist'];if(!s)return;
+  if(s.value===String(distIdx)){
+    s.value='';s.input.value='All distributors';
+    s.list.querySelectorAll('.ss-opt').forEach(o=>o.classList.remove('selected'));
+  } else {
+    s.value=String(distIdx);s.input.value=DIST_NAMES[distIdx];
+    s.list.querySelectorAll('.ss-opt').forEach(o=>o.classList.toggle('selected',o.dataset&&o.dataset.val===String(distIdx)));
+  }
+  applyFilters();
+}
+function setChannelFromKPI(f){
+  // toggle — clicking active channel resets to all
+  if(chFilter===f){f='all';}
+  chFilter=f;
+  document.querySelectorAll('.pill-btn[onclick^="setChannel"]').forEach(b=>{
+    const match=b.getAttribute('onclick').includes("'"+f+"'");
+    b.classList.toggle('active',match||(f==='all'&&b.getAttribute('onclick').includes("'all'")));
+  });
+  document.getElementById('kpiCardOff').classList.toggle('ch-active',f==='0');
+  document.getElementById('kpiCardOn').classList.toggle('ch-active',f==='1');
+  applyFilters();
 }
 
 const BRAND_IMGS=[
@@ -9465,6 +9513,8 @@ function renderBrandLegend(accts){
   const bmap=new Map();
   for(const a of accts){a.brandCE.forEach((v,b)=>{bmap.set(b,(bmap.get(b)||0)+v);});}
   const totByCE=[...bmap.entries()].map(([i,v])=>({n:BRAND_NAMES[i],i,v:Math.round(v*10)/10,c:BRAND_COLORS[i]})).sort((a,b)=>b.v-a.v);
+  const grandTotal=totByCE.reduce((s,b)=>s+b.v,0)||1;
+  const activeBrand=ssGetValue('ssBrand');
   document.getElementById('brandLegend').innerHTML=totByCE.map(b=>{
     const img=BRAND_IMGS[b.i];
     const initials=b.n.split(' ').map(w=>w[0]).join('').substring(0,3);
@@ -9472,8 +9522,28 @@ function renderBrandLegend(accts){
       ? '<img class="leg-thumb" src="'+img+'" alt="'+b.n+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
         +'<div class="leg-badge" style="background:'+b.c+';display:none">'+initials+'</div>'
       : '<div class="leg-badge" style="background:'+b.c+'">'+initials+'</div>';
-    return '<div class="leg-row">'+thumb+'<div class="leg-label">'+b.n+'</div><div class="leg-val">'+b.v.toLocaleString()+'</div></div>';
+    const pct=Math.round(b.v/grandTotal*100);
+    const isActive=activeBrand===String(b.i);
+    return '<div class="leg-row'+(isActive?' brand-active':'')+'" onclick="setBrandFilter('+b.i+')" title="'+(isActive?'Clear filter':'Filter to '+b.n)+'">'
+      +thumb
+      +'<div class="leg-info">'
+        +'<div class="leg-label">'+(isActive?'✓ ':'')+b.n+'</div>'
+        +'<div class="leg-bar-wrap"><div class="leg-bar"><div class="leg-bar-fill" style="width:'+pct+'%;background:'+b.c+'"></div></div><span class="leg-pct">'+pct+'%</span></div>'
+      +'</div>'
+      +'<div class="leg-val">'+b.v.toLocaleString()+'</div>'
+      +'</div>';
   }).join('');
+}
+function setBrandFilter(brandIdx){
+  const s=SS_STATE['ssBrand'];if(!s)return;
+  if(s.value===String(brandIdx)){
+    s.value='';s.input.value='All brands';
+    s.list.querySelectorAll('.ss-opt').forEach(o=>o.classList.remove('selected'));
+  } else {
+    s.value=String(brandIdx);s.input.value=BRAND_NAMES[brandIdx];
+    s.list.querySelectorAll('.ss-opt').forEach(o=>o.classList.toggle('selected',o.dataset&&o.dataset.val===String(brandIdx)));
+  }
+  applyFilters();
 }
 
 function fmtKarma(s){if(!s||s.length!==8)return'—';return s.slice(4,6)+'/'+s.slice(6,8)+'/'+s.slice(0,4);}
@@ -9596,7 +9666,28 @@ document.addEventListener('click', e=>{
   });
 });
 
-applyFilters();
+// Geo-locate viewer → auto-set state filter, then render
+(function initWithGeo(){
+  function go(){applyFilters();document.getElementById('kpiCardOn').classList.add('ch-active');}
+  if(!navigator.geolocation){go();return;}
+  navigator.geolocation.getCurrentPosition(function(pos){
+    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+pos.coords.latitude+'&lon='+pos.coords.longitude,{headers:{'Accept-Language':'en'}})
+      .then(r=>r.json())
+      .then(function(data){
+        const code=data.address&&(data.address['ISO3166-2-lvl4']||data.address['ISO3166-2-lvl3']);
+        if(code){
+          const st=code.replace(/^US-/,''); // "US-IA" → "IA"
+          const s=SS_STATE['ssState'];
+          if(s){
+            const opt=[...s.list.querySelectorAll('.ss-opt')].find(o=>o.dataset&&o.dataset.val===st);
+            if(opt){ssSelect('ssState',st,st);return;} // ssSelect calls applyFilters
+          }
+        }
+        go();
+      })
+      .catch(go);
+  },go,{timeout:6000,maximumAge:300000});
+})();
 </script>
 </body>
 </html>
