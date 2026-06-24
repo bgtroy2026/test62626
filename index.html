@@ -117,14 +117,19 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
 .card-meta{font-size:11px;color:#888;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card-dist{font-size:10px;color:#bbb;flex-basis:100%;margin-top:1px}
 
+/* ── Chart tabs (mobile only) ── */
+.chart-tabs{display:none}
+/* ── Mobile sort picker ── */
+.mobile-sort{display:none}
 /* ── Mobile responsive ── */
 @media(max-width:768px){
   header{padding:8px 14px;gap:10px}
   header h1{font-size:13px}
   header .period{font-size:11px}
   .container{padding:10px 10px}
-  .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
-  .kpi{padding:10px 12px}
+  /* KPI: horizontal scroll strip */
+  .kpi-row{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:8px;margin-bottom:12px;padding-bottom:4px;grid-template-columns:unset}
+  .kpi{flex:0 0 auto;width:148px;scroll-snap-align:start;padding:10px 12px}
   .kpi .value{font-size:20px}
   .kpi .sub{font-size:10px}
   /* Collapsible filters */
@@ -136,8 +141,13 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
   .filter-row label{width:auto;min-width:0;font-size:10px;margin-left:0 !important}
   .pill-btn{padding:5px 11px;font-size:12px}
   .ss-wrap{max-width:calc(50% - 4px);flex:1}
-  /* Charts */
+  /* Chart tabs */
+  .chart-tabs{display:flex;gap:0;margin-bottom:10px;background:#f3f4f6;border-radius:10px;padding:3px}
+  .chart-tab{flex:1;padding:7px 4px;border:none;background:none;border-radius:8px;font-size:12px;font-weight:600;color:#888;cursor:pointer;transition:all .15s}
+  .chart-tab.active{background:#fff;color:#111;box-shadow:0 1px 4px rgba(0,0,0,.1)}
   .charts-row{grid-template-columns:1fr;gap:10px}
+  .charts-row .card{display:none}
+  .charts-row .card.chart-visible{display:block}
   .dist-name{width:90px;font-size:10px}
   .dist-bar{margin-bottom:3px}
   /* Brand legend: 2-column grid */
@@ -150,16 +160,18 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
   .table-cards{display:block;padding:10px 10px 0}
   .table-controls{flex-wrap:wrap;gap:6px;padding:8px 10px}
   .count-badge{font-size:10px}
+  .mobile-sort{display:block;background:#fff;border:1px solid #d1d5db;border-radius:7px;padding:6px 10px;font-size:12px;color:#555;cursor:pointer;outline:none}
   .pagination{flex-wrap:wrap;gap:6px;padding:8px 10px}
   .pagination .info{font-size:10px}
-  /* Tooltip: full width, single col */
-  .item-tip{width:calc(100vw - 20px) !important;max-width:calc(100vw - 20px) !important;left:10px !important}
+  .page-btn{padding:6px 12px;font-size:12px}
+  /* Tooltip: full width, single col, pinned bottom */
+  .item-tip{width:calc(100vw - 20px) !important;max-width:calc(100vw - 20px) !important;left:10px !important;top:auto !important;bottom:12px;position:fixed}
   .tip-brands-grid{grid-template-columns:1fr !important}
   .brand-dot{width:13px;height:13px}
 }
 @media(max-width:480px){
-  .kpi-row{grid-template-columns:repeat(2,1fr)}
   header h1{font-size:12px}
+  .kpi{width:130px}
 }
 </style>
 </head>
@@ -203,9 +215,13 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
     </div><!-- /filter-body -->
   </div>
 
+  <div class="chart-tabs">
+    <button class="chart-tab" id="chartTabDist" onclick="showChartTab('dist')">Distributor</button>
+    <button class="chart-tab active" id="chartTabBrand" onclick="showChartTab('brand')">Brand Mix</button>
+  </div>
   <div class="charts-row">
-    <div class="card"><h3>CE Volume by Distributor</h3><div id="distChart"></div></div>
-    <div class="card"><h3>Brand Mix</h3><div class="brand-grid" id="brandLegend"></div></div>
+    <div class="card" id="chartCardDist"><h3>CE Volume by Distributor</h3><div id="distChart"></div></div>
+    <div class="card" id="chartCardBrand"><h3>Brand Mix</h3><div class="brand-grid" id="brandLegend"></div></div>
   </div>
 
   <div class="table-card">
@@ -215,6 +231,12 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
         <input type="text" id="searchBox" placeholder="Search accounts, cities, distributors…" oninput="applyFilters()">
       </div>
       <div class="count-badge" id="countBadge">—</div>
+      <select class="mobile-sort" onchange="mobileSortChange(this.value)">
+        <option value="vol">↓ CE Vol</option>
+        <option value="name">A–Z Name</option>
+        <option value="city">A–Z City</option>
+        <option value="dist">A–Z Dist</option>
+      </select>
     </div>
     <div class="table-wrap-desktop" style="overflow-x:auto">
       <table>
@@ -9479,9 +9501,9 @@ function renderTable(){
       const dotColor=a.brandArr.length===1?BRAND_COLORS[a.brandArr[0]]:'#6b7280';
       const ch=a.t===0?'<span class="pill pill-off">OFF</span>':'<span class="pill pill-on">ON</span>';
       const chain=a.ch>=0&&CHAIN_NAMES[a.ch]?'<span style="font-size:10px;color:#bbb">'+CHAIN_NAMES[a.ch]+'</span>':'';
-      return'<div class="acct-card">'
+      return'<div class="acct-card" ontouchstart="toggleItemTip(event,'+fi+')">'
         +'<div class="card-top">'
-        +'<span class="brand-dot" style="background:'+dotColor+'" ontouchstart="toggleItemTip(event,'+fi+')" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()"></span>'
+        +'<span class="brand-dot" style="background:'+dotColor+'"></span>'
         +'<span class="card-name">'+hl(a.n,q)+'</span>'
         +'<span class="card-ce">'+a.ce.toFixed(1)+'</span>'
         +'</div>'
@@ -9561,7 +9583,21 @@ function showItemTip(e,fi){
 function hideItemTip(){document.getElementById('itemTip').style.display='none';}
 function toggleItemTip(e,fi){e.stopPropagation();const tip=document.getElementById('itemTip');if(tip.style.display==='block'&&tip.dataset.fi==fi){hideItemTip();return;}showItemTip(e,fi);tip.dataset.fi=fi;tip.style.pointerEvents='auto';}
 function toggleFilters(btn){const body=document.getElementById('filterBody');const open=body.classList.toggle('open');btn.setAttribute('aria-expanded',open);btn.textContent=(open?'▲':'▼')+' Filters';}
-window.addEventListener('resize',()=>{renderTable();});
+function showChartTab(tab){
+  const isMob=window.innerWidth<=768;
+  if(!isMob)return;
+  document.getElementById('chartCardDist').classList.toggle('chart-visible',tab==='dist');
+  document.getElementById('chartCardBrand').classList.toggle('chart-visible',tab==='brand');
+  document.getElementById('chartTabDist').classList.toggle('active',tab==='dist');
+  document.getElementById('chartTabBrand').classList.toggle('active',tab==='brand');
+}
+function initChartTabs(){
+  if(window.innerWidth<=768){showChartTab('brand');}
+  else{document.getElementById('chartCardDist').classList.remove('chart-visible');document.getElementById('chartCardBrand').classList.remove('chart-visible');}
+}
+function mobileSortChange(k){if(sortKey===k){sortDir=-1;}else{sortKey=k;sortDir=k==='vol'?-1:1;}sortFiltered();page=0;renderTable();}
+let _resizeTimer;
+window.addEventListener('resize',()=>{clearTimeout(_resizeTimer);_resizeTimer=setTimeout(()=>{initChartTabs();renderTable();},100);});
 document.addEventListener('touchstart',function(e){const tip=document.getElementById('itemTip');if(tip.style.display==='block'&&!tip.contains(e.target)&&!e.target.classList.contains('brand-dot'))hideItemTip();},{passive:true});
 function gp(p){const tp=Math.ceil(filtered.length/PS);if(p<0||p>=tp)return;page=p;renderTable();}
 
@@ -9573,6 +9609,7 @@ document.addEventListener('click', e=>{
 });
 
 applyFilters();
+initChartTabs();
 </script>
 </body>
 </html>
