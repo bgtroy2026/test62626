@@ -9392,17 +9392,19 @@ async function geocodeCities(lat,lon){
   viewerLat=lat;viewerLon=lon;
   const needed=[...new Set(RAW.map(r=>r[4]+'|'+r[5]))].filter(k=>k&&k!=='|'&&!cityCoords[k]);
   if(!needed.length){proximityReady=true;updateProximityBtn();applyFilters();return;}
-  const total=needed.length;
-  geoStatus('📍 Finding nearby accounts… 0/'+total);
-  for(let i=0;i<needed.length;i++){
-    const[ci,st]=needed[i].split('|');
-    try{
-      const res=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(ci+','+st+',USA')+'&format=json&limit=1&addressdetails=0',{headers:{'Accept-Language':'en'}});
-      const d=await res.json();
-      if(d&&d[0])cityCoords[needed[i]]={lat:+d[0].lat,lon:+d[0].lon};
-    }catch(e){}
-    geoStatus('📍 Finding nearby accounts… '+(i+1)+'/'+total);
-    if(i<needed.length-1)await new Promise(r=>setTimeout(r,1100));
+  geoStatus('📍 Locating '+needed.length+' cities…');
+  // Fire in parallel batches of 10 — Open-Meteo has no strict rate limit
+  const BATCH=10;
+  for(let i=0;i<needed.length;i+=BATCH){
+    await Promise.all(needed.slice(i,i+BATCH).map(async key=>{
+      const[ci,st]=key.split('|');
+      try{
+        const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(ci+' '+st)+'&count=5&language=en&format=json');
+        const d=await r.json();
+        const match=d.results&&d.results.find(x=>x.country_code==='US');
+        if(match)cityCoords[key]={lat:match.latitude,lon:match.longitude};
+      }catch(e){}
+    }));
   }
   localStorage.setItem('bgb_cc_v1',JSON.stringify(cityCoords));
   geoStatus(null);
