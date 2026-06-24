@@ -106,46 +106,60 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
 .ss-opt.selected{background:#f0fdf4;color:#166534;font-weight:600}
 .ss-opt.hidden{display:none}
 
+/* ── Filter toggle (mobile only) ── */
+.filter-toggle-btn{display:none;width:100%;background:none;border:none;color:#555;font-size:13px;font-weight:600;padding:2px 0 8px;cursor:pointer;text-align:left}
+/* ── Account card layout (mobile) ── */
+.acct-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.card-name{flex:1;font-size:13px;font-weight:600;color:#111;line-height:1.3;min-width:0}
+.card-ce{font-size:16px;font-weight:800;color:#92740A;white-space:nowrap}
+.card-bottom{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.card-meta{font-size:11px;color:#888;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-dist{font-size:10px;color:#bbb;flex-basis:100%;margin-top:1px}
+
 /* ── Mobile responsive ── */
 @media(max-width:768px){
   header{padding:8px 14px;gap:10px}
   header h1{font-size:13px}
   header .period{font-size:11px}
   .container{padding:10px 10px}
-  .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
   .kpi{padding:10px 12px}
   .kpi .value{font-size:20px}
   .kpi .sub{font-size:10px}
-  .filter-section{padding:10px 12px}
-  .filter-row{gap:6px}
-  .filter-row label{width:auto;min-width:0;font-size:10px}
-  .pill-btn{padding:4px 10px;font-size:11px}
-  .ss-wrap{max-width:100%}
+  /* Collapsible filters */
+  .filter-section{padding:8px 12px}
+  .filter-toggle-btn{display:block}
+  .filter-body{display:none;padding-top:4px}
+  .filter-body.open{display:block}
+  .filter-row{gap:6px;flex-wrap:wrap}
+  .filter-row label{width:auto;min-width:0;font-size:10px;margin-left:0 !important}
+  .pill-btn{padding:5px 11px;font-size:12px}
+  .ss-wrap{max-width:calc(50% - 4px);flex:1}
+  /* Charts */
   .charts-row{grid-template-columns:1fr;gap:10px}
-  .dist-name{width:110px;font-size:10px}
-  .brand-grid{max-height:200px}
+  .dist-name{width:90px;font-size:10px}
+  .dist-bar{margin-bottom:3px}
+  /* Brand legend: 2-column grid */
+  .brand-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;max-height:220px}
+  .leg-thumb,.leg-badge{width:26px;height:26px}
+  .leg-label{font-size:10px}
+  .leg-val{font-size:10px;min-width:34px}
+  /* Account list: cards instead of table */
+  .table-wrap-desktop{display:none}
+  .table-cards{display:block;padding:10px 10px 0}
   .table-controls{flex-wrap:wrap;gap:6px;padding:8px 10px}
   .count-badge{font-size:10px}
-  table{font-size:11px}
-  th{padding:7px 8px;font-size:9px}
-  td{padding:6px 8px}
-  /* hide less-critical columns */
-  #th-chain,.chain-chip-cell,
-  #th-karma,.karma-cell{display:none}
-  .vol-bar{width:36px}
   .pagination{flex-wrap:wrap;gap:6px;padding:8px 10px}
   .pagination .info{font-size:10px}
-  /* tooltip: full-width, single column on mobile */
+  /* Tooltip: full width, single col */
   .item-tip{width:calc(100vw - 20px) !important;max-width:calc(100vw - 20px) !important;left:10px !important}
   .tip-brands-grid{grid-template-columns:1fr !important}
-  /* larger tap target for dot */
   .brand-dot{width:13px;height:13px}
 }
 @media(max-width:480px){
   .kpi-row{grid-template-columns:repeat(2,1fr)}
   header h1{font-size:12px}
-  #th-state,.state-cell,
-  #th-dist,.dist-cell{display:none}
 }
 </style>
 </head>
@@ -167,6 +181,8 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
   </div>
 
   <div class="filter-section">
+    <button class="filter-toggle-btn" onclick="toggleFilters(this)" aria-expanded="false">&#9660; Filters</button>
+    <div class="filter-body" id="filterBody">
     <div class="filter-row">
       <label>Channel</label>
       <button class="pill-btn active" onclick="setChannel('all',this)">All</button>
@@ -184,6 +200,7 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
       <div class="ss-wrap" id="ssItem" tabindex="0"><input class="ss-input" readonly value="All items" title="All items" placeholder="All items"><span class="ss-arrow">▾</span><div class="ss-dropdown"><input class="ss-search" type="text" placeholder="Search…"><div class="ss-list"></div></div></div>
       <button class="pill-btn" onclick="resetFilters()" style="margin-left:12px;border-color:#ef4444;color:#ef4444">&#10006; Reset</button>
     </div>
+    </div><!-- /filter-body -->
   </div>
 
   <div class="charts-row">
@@ -199,7 +216,7 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
       </div>
       <div class="count-badge" id="countBadge">—</div>
     </div>
-    <div style="overflow-x:auto">
+    <div class="table-wrap-desktop" style="overflow-x:auto">
       <table>
         <thead><tr>
           <th onclick="setSort('name')" id="th-name">Account <span class="sa">&#8597;</span></th>
@@ -214,6 +231,7 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
         <tbody id="tableBody"></tbody>
       </table>
     </div>
+    <div class="table-cards" id="tableCards" style="display:none"></div>
     <div class="pagination">
       <div class="info" id="paginationInfo"></div>
       <div class="page-btns" id="pageBtns"></div>
@@ -9451,22 +9469,49 @@ function renderTable(){
   const q=document.getElementById('searchBox').value.trim().toLowerCase();
   const start=page*PS,slice=filtered.slice(start,start+PS);
   const mx=filtered.length?Math.max(...filtered.map(a=>a.ce)):1;
-  document.getElementById('tableBody').innerHTML=slice.map((a,ri)=>{
-    const ch=a.t===0?'<span class="pill pill-off">OFF</span>':'<span class="pill pill-on">ON</span>';
-    const pct=Math.min(100,Math.round(a.ce/mx*100));
-    const fi=start+ri;
-    const dotColor=a.brandArr.length===1?BRAND_COLORS[a.brandArr[0]]:'#6b7280';
-    return'<tr>'
-      +'<td class="acct-name"><span class="brand-dot" style="background:'+dotColor+'" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()" ontouchstart="toggleItemTip(event,'+fi+')"></span>'+hl(a.n,q)+'</td>'
-      +'<td style="color:#555;font-size:12px">'+hl(a.ci,q)+'</td>'
-      +'<td class="state-cell"><span class="state-badge">'+a.st+'</span></td>'
-      +'<td class="dist-cell"><span class="dist-chip">'+hl(DIST_NAMES[a.d],q)+'</span></td>'
-      +'<td class="chain-chip-cell chain-chip">'+hl(a.ch>=0?CHAIN_NAMES[a.ch]:'—',q)+'</td>'
-      +'<td>'+ch+'</td>'
-      +'<td><div class="vol-bar-wrap"><div class="vol-bar"><div class="vol-bar-fill" style="width:'+pct+'%"></div></div><span class="vol-num">'+a.ce.toFixed(1)+'</span></div></td>'
-      +'<td class="karma-cell karma-date">'+fmtKarma(a.karma)+'</td>'
-      +'</tr>';
-  }).join('');
+  const isMobile=window.innerWidth<=768;
+  if(isMobile){
+    document.getElementById('tableBody').innerHTML='';
+    document.querySelector('.table-wrap-desktop').style.display='none';
+    document.getElementById('tableCards').style.display='block';
+    document.getElementById('tableCards').innerHTML=slice.map((a,ri)=>{
+      const fi=start+ri;
+      const dotColor=a.brandArr.length===1?BRAND_COLORS[a.brandArr[0]]:'#6b7280';
+      const ch=a.t===0?'<span class="pill pill-off">OFF</span>':'<span class="pill pill-on">ON</span>';
+      const chain=a.ch>=0&&CHAIN_NAMES[a.ch]?'<span style="font-size:10px;color:#bbb">'+CHAIN_NAMES[a.ch]+'</span>':'';
+      return'<div class="acct-card">'
+        +'<div class="card-top">'
+        +'<span class="brand-dot" style="background:'+dotColor+'" ontouchstart="toggleItemTip(event,'+fi+')" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()"></span>'
+        +'<span class="card-name">'+hl(a.n,q)+'</span>'
+        +'<span class="card-ce">'+a.ce.toFixed(1)+'</span>'
+        +'</div>'
+        +'<div class="card-bottom">'
+        +'<span class="card-meta">'+hl(a.ci,q)+', '+a.st+(a.ch>=0&&CHAIN_NAMES[a.ch]?' · '+CHAIN_NAMES[a.ch]:'')+'</span>'
+        +ch
+        +'</div>'
+        +'<div class="card-dist">'+hl(DIST_NAMES[a.d],q)+' · '+fmtKarma(a.karma)+'</div>'
+        +'</div>';
+    }).join('');
+  } else {
+    document.querySelector('.table-wrap-desktop').style.display='';
+    document.getElementById('tableCards').style.display='none';
+    document.getElementById('tableBody').innerHTML=slice.map((a,ri)=>{
+      const ch=a.t===0?'<span class="pill pill-off">OFF</span>':'<span class="pill pill-on">ON</span>';
+      const pct=Math.min(100,Math.round(a.ce/mx*100));
+      const fi=start+ri;
+      const dotColor=a.brandArr.length===1?BRAND_COLORS[a.brandArr[0]]:'#6b7280';
+      return'<tr>'
+        +'<td class="acct-name"><span class="brand-dot" style="background:'+dotColor+'" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()" ontouchstart="toggleItemTip(event,'+fi+')"></span>'+hl(a.n,q)+'</td>'
+        +'<td style="color:#555;font-size:12px">'+hl(a.ci,q)+'</td>'
+        +'<td class="state-cell"><span class="state-badge">'+a.st+'</span></td>'
+        +'<td class="dist-cell"><span class="dist-chip">'+hl(DIST_NAMES[a.d],q)+'</span></td>'
+        +'<td class="chain-chip-cell chain-chip">'+hl(a.ch>=0?CHAIN_NAMES[a.ch]:'—',q)+'</td>'
+        +'<td>'+ch+'</td>'
+        +'<td><div class="vol-bar-wrap"><div class="vol-bar"><div class="vol-bar-fill" style="width:'+pct+'%"></div></div><span class="vol-num">'+a.ce.toFixed(1)+'</span></div></td>'
+        +'<td class="karma-cell karma-date">'+fmtKarma(a.karma)+'</td>'
+        +'</tr>';
+    }).join('');
+  }
   document.getElementById('countBadge').textContent=filtered.length.toLocaleString()+' accounts';
   const tp=Math.ceil(filtered.length/PS);
   document.getElementById('paginationInfo').textContent='Showing '+(start+1)+'–'+Math.min(start+PS,filtered.length)+' of '+filtered.length;
@@ -9515,6 +9560,8 @@ function showItemTip(e,fi){
 }
 function hideItemTip(){document.getElementById('itemTip').style.display='none';}
 function toggleItemTip(e,fi){e.stopPropagation();const tip=document.getElementById('itemTip');if(tip.style.display==='block'&&tip.dataset.fi==fi){hideItemTip();return;}showItemTip(e,fi);tip.dataset.fi=fi;tip.style.pointerEvents='auto';}
+function toggleFilters(btn){const body=document.getElementById('filterBody');const open=body.classList.toggle('open');btn.setAttribute('aria-expanded',open);btn.textContent=(open?'▲':'▼')+' Filters';}
+window.addEventListener('resize',()=>{renderTable();});
 document.addEventListener('touchstart',function(e){const tip=document.getElementById('itemTip');if(tip.style.display==='block'&&!tip.contains(e.target)&&!e.target.classList.contains('brand-dot'))hideItemTip();},{passive:true});
 function gp(p){const tp=Math.ceil(filtered.length/PS);if(p<0||p>=tp)return;page=p;renderTable();}
 
