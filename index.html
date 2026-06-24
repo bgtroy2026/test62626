@@ -9666,27 +9666,39 @@ document.addEventListener('click', e=>{
   });
 });
 
-// Geo-locate viewer → auto-set state filter, then render
+// IP-based geolocation → auto-set state filter, then render
+// Works on mobile, file:// URLs, no permission prompt needed
 (function initWithGeo(){
   function go(){applyFilters();document.getElementById('kpiCardOn').classList.add('ch-active');}
-  if(!navigator.geolocation){go();return;}
-  navigator.geolocation.getCurrentPosition(function(pos){
-    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+pos.coords.latitude+'&lon='+pos.coords.longitude,{headers:{'Accept-Language':'en'}})
-      .then(r=>r.json())
-      .then(function(data){
-        const code=data.address&&(data.address['ISO3166-2-lvl4']||data.address['ISO3166-2-lvl3']);
-        if(code){
-          const st=code.replace(/^US-/,''); // "US-IA" → "IA"
-          const s=SS_STATE['ssState'];
-          if(s){
-            const opt=[...s.list.querySelectorAll('.ss-opt')].find(o=>o.dataset&&o.dataset.val===st);
-            if(opt){ssSelect('ssState',st,st);return;} // ssSelect calls applyFilters
+  function trySetState(st){
+    if(!st)return false;
+    st=st.toUpperCase();
+    const s=SS_STATE['ssState'];
+    if(!s)return false;
+    const opt=[...s.list.querySelectorAll('.ss-opt')].find(o=>o.dataset&&o.dataset.val===st);
+    if(opt){ssSelect('ssState',st,st);return true;} // ssSelect calls applyFilters
+    return false;
+  }
+  // Try ipapi.co first, fall back to ipwho.is
+  fetch('https://ipapi.co/json/')
+    .then(r=>r.json())
+    .then(function(d){
+      if(d.country_code==='US'&&d.region_code){
+        if(trySetState(d.region_code))return;
+      }
+      go();
+    })
+    .catch(function(){
+      fetch('https://ipwho.is/')
+        .then(r=>r.json())
+        .then(function(d){
+          if(d.country_code==='US'&&d.region_code){
+            if(trySetState(d.region_code))return;
           }
-        }
-        go();
-      })
-      .catch(go);
-  },go,{timeout:6000,maximumAge:300000});
+          go();
+        })
+        .catch(go);
+    });
 })();
 </script>
 </body>
