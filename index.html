@@ -9355,7 +9355,7 @@ ssPopulate('ssItem',ITEM_NAMES,true);
 });
 
 
-let chFilter='1',brandF=null,sortKey='vol',sortDir=-1,page=0;
+let chFilter='all',brandF=null,sortKey='vol',sortDir=-1,page=0;
 const PS=25;
 let filtered=[];
 
@@ -9723,7 +9723,7 @@ document.addEventListener('click', e=>{
 // IP-based geolocation → auto-set state + proximity filter
 // Works on mobile and file:// URLs, no permission prompt needed
 (function initWithGeo(){
-  function go(){applyFilters();document.getElementById('kpiCardOn').classList.add('ch-active');}
+  function go(){applyFilters();}
   function setStateSilent(st){
     if(!st)return;
     st=st.toUpperCase();
