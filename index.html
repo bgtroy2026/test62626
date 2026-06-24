@@ -218,7 +218,8 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
       <div class="ss-wrap" id="ssState" tabindex="0"><input class="ss-input" readonly value="All states" title="All states" placeholder="All states"><span class="ss-arrow">▾</span><div class="ss-dropdown"><input class="ss-search" type="text" placeholder="Search…"><div class="ss-list"></div></div></div>
       <label style="margin-left:8px;width:auto">Item</label>
       <div class="ss-wrap" id="ssItem" tabindex="0"><input class="ss-input" readonly value="All items" title="All items" placeholder="All items"><span class="ss-arrow">▾</span><div class="ss-dropdown"><input class="ss-search" type="text" placeholder="Search…"><div class="ss-list"></div></div></div>
-      <button class="pill-btn" onclick="resetFilters()" style="margin-left:12px;border-color:#ef4444;color:#ef4444">&#10006; Reset</button>
+      <button class="pill-btn" id="btnProximity" onclick="toggleProximity()" style="margin-left:8px" title="Filter accounts within 15 miles">📍 …</button>
+      <button class="pill-btn" onclick="resetFilters()" style="margin-left:4px;border-color:#ef4444;color:#ef4444">&#10006; Reset</button>
     </div>
     </div><!-- /filter-body -->
   </div>
@@ -9358,6 +9359,58 @@ let chFilter='1',brandF=null,sortKey='vol',sortDir=-1,page=0;
 const PS=25;
 let filtered=[];
 
+// Proximity filter state
+let viewerLat=null,viewerLon=null;
+let cityCoords=JSON.parse(localStorage.getItem('bgb_cc_v1')||'{}');
+let proximityMiles=15,proximityEnabled=true,proximityReady=false;
+
+function haversineMiles(la1,lo1,la2,lo2){
+  const R=3958.8,dL=(la2-la1)*Math.PI/180,dN=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dN/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function geoStatus(msg){
+  let el=document.getElementById('geoStatus');
+  if(!msg){if(el)el.style.display='none';return;}
+  if(!el){el=document.createElement('div');el.id='geoStatus';el.style.cssText='position:fixed;bottom:68px;left:50%;transform:translateX(-50%);background:#1D6FA4;color:#fff;padding:7px 16px;border-radius:20px;font-size:12px;z-index:9999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)';document.body.appendChild(el);}
+  el.textContent=msg;el.style.display='block';
+}
+function updateProximityBtn(){
+  const btn=document.getElementById('btnProximity');
+  if(!btn)return;
+  if(!proximityReady){btn.textContent='📍 …';btn.classList.remove('active');return;}
+  btn.textContent=proximityEnabled?'📍 '+proximityMiles+'mi':'📍 Near me';
+  btn.classList.toggle('active',proximityEnabled);
+}
+function toggleProximity(){
+  if(!proximityReady)return;
+  proximityEnabled=!proximityEnabled;
+  updateProximityBtn();
+  applyFilters();
+}
+async function geocodeCities(lat,lon){
+  viewerLat=lat;viewerLon=lon;
+  const needed=[...new Set(RAW.map(r=>r[4]+'|'+r[5]))].filter(k=>k&&k!=='|'&&!cityCoords[k]);
+  if(!needed.length){proximityReady=true;updateProximityBtn();applyFilters();return;}
+  const total=needed.length;
+  geoStatus('📍 Finding nearby accounts… 0/'+total);
+  for(let i=0;i<needed.length;i++){
+    const[ci,st]=needed[i].split('|');
+    try{
+      const res=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(ci+','+st+',USA')+'&format=json&limit=1&addressdetails=0',{headers:{'Accept-Language':'en'}});
+      const d=await res.json();
+      if(d&&d[0])cityCoords[needed[i]]={lat:+d[0].lat,lon:+d[0].lon};
+    }catch(e){}
+    geoStatus('📍 Finding nearby accounts… '+(i+1)+'/'+total);
+    if(i<needed.length-1)await new Promise(r=>setTimeout(r,1100));
+  }
+  localStorage.setItem('bgb_cc_v1',JSON.stringify(cityCoords));
+  geoStatus(null);
+  proximityReady=true;
+  updateProximityBtn();
+  applyFilters();
+}
+
 function setChannel(f,el){chFilter=f;document.querySelectorAll('.pill-btn[onclick^="setChannel"]').forEach(b=>b.classList.remove('active'));el.classList.add('active');applyFilters();}
 function setSort(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='vol')?-1:1;}document.querySelectorAll('th').forEach(t=>t.classList.remove('sorted'));const th=document.getElementById('th-'+k);if(th){th.classList.add('sorted');th.querySelector('.sa').textContent=sortDir===-1?'↓':'↑';}page=0;sortFiltered();renderTable();}
 function sortFiltered(){filtered.sort((a,b)=>{const av=sortKey==='vol'?a.ce:sortKey==='name'?a.n:sortKey==='city'?a.ci:sortKey==='state'?a.st:sortKey==='dist'?DIST_NAMES[a.d]:sortKey==='chain'?(a.ch>=0?CHAIN_NAMES[a.ch]:''):sortKey==='karma'?a.karma:a.t;const bv=sortKey==='vol'?b.ce:sortKey==='name'?b.n:sortKey==='city'?b.ci:sortKey==='state'?b.st:sortKey==='dist'?DIST_NAMES[b.d]:sortKey==='chain'?(b.ch>=0?CHAIN_NAMES[b.ch]:''):sortKey==='karma'?b.karma:b.t;return av<bv?-1*sortDir:av>bv?sortDir:0;});}
@@ -9377,6 +9430,7 @@ function buildAccts(){
     if(sv!==''&&st!==sv)continue;
     if(iv!==''&&ii!==parseInt(iv))continue;
     if(cv!==''&&ch!==parseInt(cv))continue;
+    if(proximityEnabled&&proximityReady&&viewerLat!==null){const cc=cityCoords[ci+'|'+st];if(!cc||haversineMiles(viewerLat,viewerLon,cc.lat,cc.lon)>proximityMiles)continue;}
     const k=d+'|'+t+'|'+n+'|'+ci+'|'+st+'|'+ch;
     if(!m.has(k))m.set(k,{d,t,n,ci,st,ch,karma,ce:0,brands:new Set(),brandCE:new Map(),brandItems:new Map()});
     const a=m.get(k);
@@ -9666,37 +9720,37 @@ document.addEventListener('click', e=>{
   });
 });
 
-// IP-based geolocation → auto-set state filter, then render
-// Works on mobile, file:// URLs, no permission prompt needed
+// IP-based geolocation → auto-set state + proximity filter
+// Works on mobile and file:// URLs, no permission prompt needed
 (function initWithGeo(){
   function go(){applyFilters();document.getElementById('kpiCardOn').classList.add('ch-active');}
-  function trySetState(st){
-    if(!st)return false;
+  function setStateSilent(st){
+    if(!st)return;
     st=st.toUpperCase();
-    const s=SS_STATE['ssState'];
-    if(!s)return false;
+    const s=SS_STATE['ssState'];if(!s)return;
     const opt=[...s.list.querySelectorAll('.ss-opt')].find(o=>o.dataset&&o.dataset.val===st);
-    if(opt){ssSelect('ssState',st,st);return true;} // ssSelect calls applyFilters
-    return false;
+    if(!opt)return;
+    s.value=st;s.input.value=st;s.input.title=st;
+    s.list.querySelectorAll('.ss-opt').forEach(o=>o.classList.toggle('selected',o.dataset.val===st));
   }
-  // Try ipapi.co first, fall back to ipwho.is
+  function handleGeo(d,stField,latField,lonField){
+    const st=d[stField];
+    const lat=parseFloat(d[latField]);
+    const lon=parseFloat(d[lonField]);
+    if(st)setStateSilent(st.toUpperCase());
+    if(!isNaN(lat)&&!isNaN(lon)){
+      geocodeCities(lat,lon); // async — calls applyFilters when done
+    } else {
+      go();
+    }
+  }
   fetch('https://ipapi.co/json/')
     .then(r=>r.json())
-    .then(function(d){
-      if(d.country_code==='US'&&d.region_code){
-        if(trySetState(d.region_code))return;
-      }
-      go();
-    })
-    .catch(function(){
+    .then(d=>handleGeo(d,'region_code','latitude','longitude'))
+    .catch(()=>{
       fetch('https://ipwho.is/')
         .then(r=>r.json())
-        .then(function(d){
-          if(d.country_code==='US'&&d.region_code){
-            if(trySetState(d.region_code))return;
-          }
-          go();
-        })
+        .then(d=>handleGeo(d,'region_code','latitude','longitude'))
         .catch(go);
     });
 })();
