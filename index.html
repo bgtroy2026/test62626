@@ -60,7 +60,7 @@ tr:hover td{background:#fafafa}
 .acct-name{font-weight:500;color:#111;display:flex;align-items:center;gap:7px}
 .brand-dot{width:9px;height:9px;border-radius:50%;background:#d1d5db;flex-shrink:0;cursor:default;transition:transform .1s,box-shadow .1s;position:relative}
 .brand-dot:hover{transform:scale(1.5);box-shadow:0 0 0 3px rgba(0,0,0,.08)}
-.item-tip{display:none;position:fixed;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:10px 12px;z-index:9999;min-width:200px;pointer-events:none}
+.item-tip{display:none;position:fixed;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:10px 12px;z-index:10000;min-width:200px;pointer-events:none}
 .item-tip-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#aaa;margin-bottom:8px}
 .tip-row{display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6}
 .tip-row:last-child{border-bottom:none}
@@ -155,9 +155,15 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
   .pagination{flex-wrap:wrap;gap:6px;padding:8px 10px}
   .pagination .info{font-size:10px}
   .page-btn{padding:6px 12px;font-size:12px}
-  /* Tooltip: full width, single col, pinned bottom */
-  .item-tip{width:calc(100vw - 20px) !important;max-width:calc(100vw - 20px) !important;left:10px !important;top:auto !important;bottom:12px;position:fixed}
+  /* Bottom sheet tooltip — partial height, scrollable, not full-screen */
+  .item-tip{position:fixed !important;left:0 !important;right:0 !important;bottom:0 !important;top:auto !important;width:100% !important;max-width:100% !important;max-height:55vh;overflow-y:auto;border-radius:16px 16px 0 0 !important;box-shadow:0 -4px 24px rgba(0,0,0,.18) !important;padding:0 !important;-webkit-overflow-scrolling:touch}
+  .tip-sheet-handle{width:36px;height:4px;background:#d1d5db;border-radius:2px;margin:10px auto 4px;display:block}
+  .tip-sheet-inner{padding:4px 16px 28px;position:relative}
+  .tip-close-btn{position:absolute;top:0;right:0;background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;padding:2px 6px;line-height:1}
   .tip-brands-grid{grid-template-columns:1fr !important}
+  /* Dim backdrop behind sheet */
+  .tip-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:9998}
+  .tip-backdrop.open{display:block}
   .brand-dot{width:13px;height:13px}
 }
 @media(max-width:480px){
@@ -246,6 +252,7 @@ em.hl{font-style:normal;background:#fef08a;color:#111;border-radius:2px;padding:
     </div>
   </div>
 </div>
+<div class="tip-backdrop" id="tipBackdrop" onclick="hideItemTip()"></div>
 <div class="item-tip" id="itemTip"></div>
 
 <script>
@@ -9546,26 +9553,32 @@ function showItemTip(e,fi){
     return'<div class="tip-brand-section">'+brandHdr+itemRows+'</div>';
   }).join('');
   const tip=document.getElementById('itemTip');
-  tip.innerHTML='<div class="item-tip-title">'+a.n+'</div><div class="tip-brands-grid" style="grid-template-columns:repeat('+brandCols+',1fr)">'+sections+'</div>';
-  tip.style.width=tipW+'px';
-  tip.style.maxWidth=(window.innerWidth-20)+'px';
+  const isMob=window.innerWidth<=768;
+  if(isMob){
+    tip.innerHTML='<span class="tip-sheet-handle"></span><div class="tip-sheet-inner"><button class="tip-close-btn" onclick="hideItemTip()">&#x2715;</button><div class="item-tip-title">'+a.n+'</div><div class="tip-brands-grid">'+sections+'</div></div>';
+    tip.style.width='';tip.style.maxWidth='';tip.style.left='';tip.style.top='';
+    document.getElementById('tipBackdrop').classList.add('open');
+  } else {
+    tip.innerHTML='<div class="item-tip-title">'+a.n+'</div><div class="tip-brands-grid" style="grid-template-columns:repeat('+brandCols+',1fr)">'+sections+'</div>';
+    tip.style.width=tipW+'px';
+    tip.style.maxWidth=(window.innerWidth-20)+'px';
+    const r=e.currentTarget.getBoundingClientRect();
+    const tw=tip.offsetWidth||tipW;
+    const th=tip.offsetHeight;
+    let left=r.left;
+    let top=r.bottom+4;
+    if(left+tw>window.innerWidth-10)left=Math.max(10,window.innerWidth-tw-10);
+    if(top+th>window.innerHeight-10)top=r.top-th-4;
+    top=Math.max(10,Math.min(top,window.innerHeight-th-10));
+    left=Math.max(10,left);
+    tip.style.left=left+'px';tip.style.top=top+'px';
+  }
   tip.style.display='block';
-  const r=e.currentTarget.getBoundingClientRect();
-  const tw=tip.offsetWidth||tipW;
-  const th=tip.offsetHeight;
-  // position:fixed uses viewport coords — no scrollX/Y needed
-  let left=r.left;
-  let top=r.bottom+4;
-  // flip left if it would overflow right edge
-  if(left+tw>window.innerWidth-10)left=Math.max(10,window.innerWidth-tw-10);
-  // flip above dot if it would overflow bottom edge
-  if(top+th>window.innerHeight-10)top=r.top-th-4;
-  // hard-clamp so it never escapes the viewport on any side
-  top=Math.max(10,Math.min(top,window.innerHeight-th-10));
-  left=Math.max(10,left);
-  tip.style.left=left+'px';tip.style.top=top+'px';
 }
-function hideItemTip(){document.getElementById('itemTip').style.display='none';}
+function hideItemTip(){
+  document.getElementById('itemTip').style.display='none';
+  document.getElementById('tipBackdrop').classList.remove('open');
+}
 function toggleItemTip(e,fi){e.stopPropagation();const tip=document.getElementById('itemTip');if(tip.style.display==='block'&&tip.dataset.fi==fi){hideItemTip();return;}showItemTip(e,fi);tip.dataset.fi=fi;tip.style.pointerEvents='auto';}
 function toggleFilters(btn){const body=document.getElementById('filterBody');const open=body.classList.toggle('open');btn.setAttribute('aria-expanded',open);btn.textContent=(open?'▲':'▼')+' Filters';}
 function mobileSortChange(k){if(sortKey===k){sortDir=-1;}else{sortKey=k;sortDir=k==='vol'?-1:1;}sortFiltered();page=0;renderTable();}
