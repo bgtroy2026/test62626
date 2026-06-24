@@ -9492,9 +9492,9 @@ function renderTable(){
       const dotColor=a.brandArr.length===1?BRAND_COLORS[a.brandArr[0]]:'#6b7280';
       const ch=a.t===0?'<span class="pill pill-off">OFF</span>':'<span class="pill pill-on">ON</span>';
       const chain=a.ch>=0&&CHAIN_NAMES[a.ch]?'<span style="font-size:10px;color:#bbb">'+CHAIN_NAMES[a.ch]+'</span>':'';
-      return'<div class="acct-card" ontouchstart="toggleItemTip(event,'+fi+')">'
+      return'<div class="acct-card">'
         +'<div class="card-top">'
-        +'<span class="brand-dot" style="background:'+dotColor+'"></span>'
+        +'<span class="brand-dot" style="background:'+dotColor+'" ontouchstart="toggleItemTip(event,'+fi+')" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()"></span>'
         +'<span class="card-name">'+hl(a.n,q)+'</span>'
         +'<span class="card-ce">'+a.ce.toFixed(1)+'</span>'
         +'</div>'
