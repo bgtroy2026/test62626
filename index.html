@@ -9605,7 +9605,7 @@ function renderTable(){
       const chain=a.ch>=0&&CHAIN_NAMES[a.ch]?'<span style="font-size:10px;color:#bbb">'+CHAIN_NAMES[a.ch]+'</span>':'';
       return'<div class="acct-card">'
         +'<div class="card-top">'
-        +'<span class="brand-dot" style="background:'+dotColor+'" onclick="toggleItemTip(event,'+fi+')" onmouseenter="showItemTip(event,'+fi+')" onmouseleave="hideItemTip()"></span>'
+        +'<span class="brand-dot" style="background:'+dotColor+'" onclick="toggleItemTip(event,'+fi+')"></span>'
         +'<span class="card-name">'+hl(a.n,q)+'</span>'
         +'<span class="card-ce">'+a.ce.toFixed(1)+'</span>'
         +'</div>'
@@ -9707,16 +9707,31 @@ document.addEventListener('click', e=>{
   });
 });
 
-// Get location via browser (WiFi/cell on phones — fast, no GPS lock needed)
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(
-    function(pos){viewerLat=pos.coords.latitude;viewerLon=pos.coords.longitude;geocodeCities();},
-    function(){applyFilters();}, // denied — just sort by city
-    {timeout:8000,maximumAge:600000,enableHighAccuracy:false}
-  );
-} else {
-  applyFilters();
-}
+// Location init: try browser geolocation first, fall back to IP (file:// blocks geo on Android/iOS)
+(function initLocation(){
+  function onCoords(lat,lon){viewerLat=lat;viewerLon=lon;geocodeCities();}
+  function tryIP(){
+    fetch('https://ipapi.co/json/')
+      .then(r=>r.json())
+      .then(function(d){
+        if(d.latitude&&d.longitude)onCoords(+d.latitude,+d.longitude);
+        else fetch('https://ipwho.is/').then(r=>r.json()).then(function(d2){
+          if(d2.latitude&&d2.longitude)onCoords(+d2.latitude,+d2.longitude);
+          else applyFilters();
+        }).catch(function(){applyFilters();});
+      })
+      .catch(function(){applyFilters();});
+  }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      function(pos){onCoords(pos.coords.latitude,pos.coords.longitude);},
+      tryIP,
+      {timeout:5000,maximumAge:600000,enableHighAccuracy:false}
+    );
+  } else {
+    tryIP();
+  }
+})();
 </script>
 </body>
 </html>
