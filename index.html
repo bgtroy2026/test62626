@@ -9367,32 +9367,22 @@ function haversineMiles(la1,lo1,la2,lo2){
   const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dN/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-function geoStatus(msg){
-  let el=document.getElementById('geoStatus');
-  if(!msg){if(el)el.style.display='none';return;}
-  if(!el){el=document.createElement('div');el.id='geoStatus';el.style.cssText='position:fixed;bottom:68px;left:50%;transform:translateX(-50%);background:#1D6FA4;color:#fff;padding:7px 16px;border-radius:20px;font-size:12px;z-index:9999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)';document.body.appendChild(el);}
-  el.textContent=msg;el.style.display='block';
-}
 async function geocodeCities(){
   const needed=[...new Set(RAW.map(r=>r[4]+'|'+r[5]))].filter(k=>k&&k!=='|'&&!cityCoords[k]);
-  if(!needed.length){sortKey='prox';sortDir=1;applyFilters();return;}
-  geoStatus('📍 Locating '+needed.length+' cities…');
-  const BATCH=10;
-  for(let i=0;i<needed.length;i+=BATCH){
-    await Promise.all(needed.slice(i,i+BATCH).map(async key=>{
-      const[ci,st]=key.split('|');
-      try{
-        const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(ci+' '+st)+'&count=5&language=en&format=json');
-        const d=await r.json();
-        const match=d.results&&d.results.find(x=>x.country_code==='US');
-        if(match)cityCoords[key]={lat:match.latitude,lon:match.longitude};
-      }catch(e){}
-    }));
-  }
+  if(!needed.length){sortKey='prox';sortDir=1;page=0;applyFilters();return;}
+  // Fire all requests in parallel — no rate limiting, runs silently in background
+  await Promise.all(needed.map(async function(key){
+    const[ci,st]=key.split('|');
+    try{
+      const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(ci+' '+st)+'&count=5&language=en&format=json');
+      const d=await r.json();
+      const match=d.results&&d.results.find(function(x){return x.country_code==='US';});
+      if(match)cityCoords[key]={lat:match.latitude,lon:match.longitude};
+    }catch(e){}
+  }));
   localStorage.setItem('bgb_cc_v1',JSON.stringify(cityCoords));
-  geoStatus(null);
-  sortKey='prox';sortDir=1;
-  applyFilters();
+  sortKey='prox';sortDir=1;page=0;
+  applyFilters(); // silently re-sorts once all city coords are in
 }
 
 function setChannel(f,el){chFilter=f;document.querySelectorAll('.pill-btn[onclick^="setChannel"]').forEach(b=>b.classList.remove('active'));el.classList.add('active');applyFilters();}
@@ -9707,20 +9697,21 @@ document.addEventListener('click', e=>{
   });
 });
 
-// Location init: try browser geolocation first, fall back to IP (file:// blocks geo on Android/iOS)
+// Show accounts immediately, then locate user + geocode cities silently in background
+applyFilters();
 (function initLocation(){
-  function onCoords(lat,lon){viewerLat=lat;viewerLon=lon;geocodeCities();}
+  function onCoords(lat,lon){
+    viewerLat=lat;viewerLon=lon;
+    geocodeCities(); // re-sorts by distance when done, no blocking
+  }
   function tryIP(){
-    fetch('https://ipapi.co/json/')
-      .then(r=>r.json())
-      .then(function(d){
-        if(d.latitude&&d.longitude)onCoords(+d.latitude,+d.longitude);
-        else fetch('https://ipwho.is/').then(r=>r.json()).then(function(d2){
-          if(d2.latitude&&d2.longitude)onCoords(+d2.latitude,+d2.longitude);
-          else applyFilters();
-        }).catch(function(){applyFilters();});
-      })
-      .catch(function(){applyFilters();});
+    fetch('https://ipapi.co/json/').then(r=>r.json())
+      .then(function(d){if(d.latitude&&d.longitude)onCoords(+d.latitude,+d.longitude);})
+      .catch(function(){
+        fetch('https://ipwho.is/').then(r=>r.json())
+          .then(function(d){if(d.latitude&&d.longitude)onCoords(+d.latitude,+d.longitude);})
+          .catch(function(){});
+      });
   }
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
